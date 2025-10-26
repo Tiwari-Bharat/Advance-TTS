@@ -42,4 +42,4 @@ export const EFFECT_PROMPTS: { [key: string]: string } = {
 };
 
 
-export const DEFAULT_TEXT = "I am build by Mr. Bharat Tiwari.";
+export const DEFAULT_TEXT = "The character limit has been removed. Your words are now truly limitless. Craft novels, epic scripts, or any long-form content you can imagine. The only limit is your creativity.";
