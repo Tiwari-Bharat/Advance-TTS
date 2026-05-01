@@ -6,19 +6,23 @@ interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(({ label, ...props }, ref) => {
   return (
-    <div>
+    <div className="flex flex-col">
       {label && (
-        <label htmlFor={props.id || 'textarea'} className="block text-sm font-medium text-slate-300 mb-2">
+        <label htmlFor={props.id || 'textarea'} className="block text-sm font-medium text-slate-300 mb-2 tracking-wide">
           {label}
         </label>
       )}
-      <textarea
-        ref={ref}
-        id={props.id || 'textarea'}
-        className="w-full h-40 p-3 bg-slate-800 border border-slate-700 rounded-md text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
-        {...props}
-      ></textarea>
-      <p className="text-right text-sm text-slate-400 mt-2">
+      <div className="relative group">
+        <textarea
+          ref={ref}
+          id={props.id || 'textarea'}
+          className="w-full h-40 p-4 bg-slate-900 border border-slate-700/60 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all custom-scrollbar shadow-inner group-hover:border-slate-500"
+          {...props}
+        ></textarea>
+        {/* Subtle inner highlight */}
+        <div className="absolute inset-x-0 top-0 h-px bg-white/5 pointer-events-none rounded-t-xl"></div>
+      </div>
+      <p className="text-right text-xs font-mono text-slate-500 mt-2">
           {String(props.value || '').length} characters
       </p>
     </div>

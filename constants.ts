@@ -5,11 +5,7 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
   { value: 'Puck', label: 'Puck (Male, Warm)', description: 'A warm and friendly male voice, perfect for conversational content.' },
   { value: 'Charon', label: 'Charon (Male, Deep)', description: 'A deep, authoritative male voice, suitable for serious topics.' },
   { value: 'Fenrir', label: 'Fenrir (Female, Crisp)', description: 'A crisp, energetic female voice that captures attention.' },
-  { value: 'Zephyr', label: 'Zephyr (Female, Gentle)', description: 'A gentle and soothing female voice, ideal for calming content.' },
-  { value: 'Echo', label: 'Echo (Male, Resonant)', description: 'A resonant male voice with a commanding presence.' },
-  { value: 'Calypso', label: 'Calypso (Female, Melodic)', description: 'A melodic and enchanting female voice, great for storytelling.' },
-  { value: 'Boreas', label: 'Boreas (Male, Stern)', description: 'A stern and serious male voice, for formal announcements.' },
-  { value: 'Amphion', label: 'Amphion (Male, Bardic)', description: 'A storytelling male voice with a dramatic flair.' },
+  { value: 'Aoede', label: 'Aoede (Female, Gentle)', description: 'A gentle and soothing female voice, ideal for calming content.' }
 ];
 
 export const SOUND_EFFECTS: VoiceOption[] = [
@@ -38,6 +34,7 @@ export const EFFECT_PROMPTS: { [key: string]: string } = {
 export const DEFAULT_TEXT = "The character limit has been removed. Your words are now truly limitless. Craft novels, epic scripts, or any long-form content you can imagine. The only limit is your creativity.";
 
 export const TARGET_LANGUAGES = [
+  { value: 'Hindi', label: 'Hindi' },
   { value: 'Spanish', label: 'Spanish' },
   { value: 'French', label: 'French' },
   { value: 'German', label: 'German' },
@@ -47,6 +44,5 @@ export const TARGET_LANGUAGES = [
   { value: 'Portuguese', label: 'Portuguese' },
   { value: 'Chinese (Mandarin)', label: 'Chinese (Mandarin)' },
   { value: 'Russian', label: 'Russian' },
-  { value: 'Hindi', label: 'Hindi' },
   { value: 'Arabic', label: 'Arabic' },
 ];
