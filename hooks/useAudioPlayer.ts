@@ -5,23 +5,32 @@ export const useAudioPlayer = (audioContext: AudioContext | null) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [pitch, setPitch] = useState(0);
 
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const audioBufferRef = useRef<AudioBuffer | null>(null);
   
   const animationFrameRef = useRef<number>(0);
-  const playbackStartTimeRef = useRef<number>(0); // Time in AudioContext's clock
-  const startOffsetRef = useRef<number>(0); // Time within the audio buffer
+  const playbackStartTimeRef = useRef<number>(0);
+  const startOffsetRef = useRef<number>(0);
+
+  // Use refs for currently applied rate/pitch to calculate time accurately
+  const currentRateRef = useRef<number>(1);
 
   const stop = useCallback((resetTime = true) => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
     if (audioSourceRef.current) {
-      audioSourceRef.current.onended = null; // Prevent onended from firing on manual stop
-      audioSourceRef.current.stop();
-      audioSourceRef.current.disconnect();
+      audioSourceRef.current.onended = null;
+      try {
+        audioSourceRef.current.stop();
+        audioSourceRef.current.disconnect();
+      } catch (e) {
+        console.error("Error stopping audio source:", e);
+      }
       audioSourceRef.current = null;
     }
     if (resetTime) {
@@ -33,7 +42,7 @@ export const useAudioPlayer = (audioContext: AudioContext | null) => {
 
   const tick = useCallback(() => {
     if (audioContext && isPlaying) {
-        const elapsedTime = audioContext.currentTime - playbackStartTimeRef.current;
+        const elapsedTime = (audioContext.currentTime - playbackStartTimeRef.current) * currentRateRef.current;
         const newCurrentTime = startOffsetRef.current + elapsedTime;
         setCurrentTime(newCurrentTime);
 
@@ -47,57 +56,71 @@ export const useAudioPlayer = (audioContext: AudioContext | null) => {
   }, [audioContext, isPlaying, duration, stop]);
 
   const play = useCallback((buffer?: AudioBuffer) => {
-    if (!audioContext) return;
+    if (!audioContext) {
+      console.error("Audio Context not found");
+      return;
+    }
     
-    // If playing, it's a call to pause
     if(isPlaying) {
-        startOffsetRef.current += audioContext.currentTime - playbackStartTimeRef.current;
-        stop(false); // Stop playback but don't reset time (pause)
+        startOffsetRef.current += (audioContext.currentTime - playbackStartTimeRef.current) * currentRateRef.current;
+        stop(false);
         return;
     }
 
-    // Use existing buffer if none is provided (resume)
     const bufferToPlay = buffer || audioBufferRef.current;
     if (!bufferToPlay) return;
 
-    if(buffer) { // If a new buffer is provided, reset everything
+    if(buffer) {
       audioBufferRef.current = buffer;
       setDuration(buffer.duration);
       startOffsetRef.current = 0;
       setCurrentTime(0);
     }
 
-    const source = audioContext.createBufferSource();
-    source.buffer = bufferToPlay;
-    
-    // Create GainNode if it doesn't exist
-    if (!gainNodeRef.current) {
-      gainNodeRef.current = audioContext.createGain();
-      gainNodeRef.current.connect(audioContext.destination);
+    try {
+      const source = audioContext.createBufferSource();
+      source.buffer = bufferToPlay;
+      
+      // Apply current playback rate and pitch
+      currentRateRef.current = playbackRate;
+      source.playbackRate.value = playbackRate;
+      source.detune.value = pitch * 1200; // -1 to 1 maps to -1200 to 1200 cents (1 octave)
+
+      if (!gainNodeRef.current) {
+        gainNodeRef.current = audioContext.createGain();
+        gainNodeRef.current.connect(audioContext.destination);
+      }
+      gainNodeRef.current.gain.value = volume;
+      source.connect(gainNodeRef.current);
+
+      source.onended = () => {
+          if (audioSourceRef.current === source) {
+              stop(true);
+              setCurrentTime(duration);
+          }
+      };
+      
+      playbackStartTimeRef.current = audioContext.currentTime;
+      source.start(0, startOffsetRef.current);
+
+      audioSourceRef.current = source;
+      setIsPlaying(true);
+      animationFrameRef.current = requestAnimationFrame(tick);
+    } catch (err) {
+      console.error("Failed to play audio:", err);
+      stop(true);
+      throw new Error("Failed to initialize audio playback.");
     }
-    gainNodeRef.current.gain.value = volume;
-    source.connect(gainNodeRef.current);
-
-    source.onended = () => {
-        // Only auto-stop if it wasn't manually paused/stopped
-        if (audioSourceRef.current === source) {
-            stop(true);
-            setCurrentTime(duration);
-        }
-    };
-    
-    playbackStartTimeRef.current = audioContext.currentTime;
-    source.start(0, startOffsetRef.current);
-
-    audioSourceRef.current = source;
-    setIsPlaying(true);
-    animationFrameRef.current = requestAnimationFrame(tick);
-  }, [audioContext, stop, tick, isPlaying, volume, duration]);
+  }, [audioContext, stop, tick, isPlaying, volume, duration, playbackRate, pitch]);
 
   const seek = useCallback((time: number) => {
     if (!audioContext || !audioBufferRef.current) return;
 
     const wasPlaying = isPlaying;
+    
+    if (wasPlaying) {
+      startOffsetRef.current += (audioContext.currentTime - playbackStartTimeRef.current) * currentRateRef.current;
+    }
     stop(false);
 
     const clampedTime = Math.max(0, Math.min(time, duration));
@@ -117,9 +140,31 @@ export const useAudioPlayer = (audioContext: AudioContext | null) => {
     }
   }, []);
 
+  const changePlaybackRate = useCallback((newRate: number) => {
+    const clamped = Math.max(0.5, Math.min(2, newRate));
+    setPlaybackRate(clamped);
+    if (isPlaying && audioContext) {
+      // Update running playback offset
+      startOffsetRef.current += (audioContext.currentTime - playbackStartTimeRef.current) * currentRateRef.current;
+      playbackStartTimeRef.current = audioContext.currentTime;
+      currentRateRef.current = clamped;
+      if (audioSourceRef.current) {
+        audioSourceRef.current.playbackRate.value = clamped;
+      }
+    }
+  }, [isPlaying, audioContext]);
+
+  const changePitch = useCallback((newPitch: number) => {
+    const clamped = Math.max(-1, Math.min(1, newPitch));
+    setPitch(clamped);
+    if (audioSourceRef.current) {
+      audioSourceRef.current.detune.value = clamped * 1200;
+    }
+  }, []);
+
   useEffect(() => {
-    return () => stop(true); // Cleanup on unmount
+    return () => stop(true);
   }, [stop]);
 
-  return { play, stop, seek, isPlaying, currentTime, duration, volume, changeVolume };
+  return { play, stop, seek, isPlaying, currentTime, duration, volume, changeVolume, playbackRate, changePlaybackRate, pitch, changePitch };
 };

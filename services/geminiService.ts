@@ -34,15 +34,59 @@ Keyword:`;
       return EFFECT_PROMPTS[resultText];
     }
     return ''; // Default to normal if the response is unexpected
-  } catch(error) {
+} catch(error) {
     console.error("Error analyzing text emotion:", error);
     return ''; // Default to normal on error
   }
 }
 
-export const generateSpeech = async (text: string, voice: string, effect: string, audioContext: AudioContext): Promise<AudioBuffer> => {
+export const translateVideoText = async (textOrUrl: string, targetLanguage: string): Promise<string> => {
   try {
-    const prompt = `${effect}${text}`;
+    const prompt = `The user has provided the following input:\n\n"${textOrUrl}"\n\nIf this input is a URL (such as a YouTube video link), you MUST use the Google Search tool to look up the exact URL. Find the authentic video title, channel name, and description. Do NOT hallucinate or guess the video content based on the URL string. After retrieving the true details of the video, provide a summary of its content in ${targetLanguage}, and suggest 2 realistically related videos in ${targetLanguage}. \n\nIf the input is just plain text, translate it directly to ${targetLanguage}.\n\nFormat your response to be spoken aloud (text-to-speech). DO NOT include markdown formatting or special characters that sound awkward when spoken.`;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        tools: [{ googleSearch: {} }]
+      }
+    });
+    return (response.text || '').trim();
+  } catch (error) {
+    console.error("Error translating video/text:", error);
+    if (error instanceof Error) {
+        throw new Error(`Translation/Search failed: ${error.message}`);
+    }
+    throw new Error("An unknown error occurred during translation/search.");
+  }
+};
+
+export const translateText = async (text: string, targetLanguage: string): Promise<string> => {
+  try {
+    const prompt = `Translate the following text to ${targetLanguage}. Return ONLY the translated text, without any additional explanations or quotes.\n\nText: "${text}"`;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    return (response.text || '').trim();
+  } catch (error) {
+    console.error("Error translating text:", error);
+    if (error instanceof Error) {
+        throw new Error(`Translation failed: ${error.message}`);
+    }
+    throw new Error("An unknown error occurred during translation.");
+  }
+};
+
+export const generateSpeech = async (text: string, voice: string, effect: string, audioContext: AudioContext, isSsml: boolean = false): Promise<AudioBuffer> => {
+  try {
+    let prompt = text;
+    if (isSsml) {
+      prompt = (text.trim().startsWith('<speak>') && text.trim().endsWith('</speak>'))
+        ? text.trim()
+        : `<speak>${text}</speak>`;
+    } else {
+      prompt = `${effect}${text}`;
+    }
     
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-preview-tts',
@@ -63,9 +107,9 @@ export const generateSpeech = async (text: string, voice: string, effect: string
 
     if (!candidate || !part || !base64Audio) {
       if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
-          throw new Error(`Speech generation failed: ${candidate.finishReason}. The prompt may have been blocked.`);
+          throw new Error(`Speech generation failed with reason: ${candidate.finishReason}. The content may have triggered safety filters.`);
       }
-      throw new Error("Invalid response from API. Could not extract audio data.");
+      throw new Error("Invalid response from Gemini API. Audio data was missing or malformed.");
     }
 
     const audioBytes = decode(base64Audio);
@@ -75,8 +119,8 @@ export const generateSpeech = async (text: string, voice: string, effect: string
   } catch (error) {
     console.error("Error generating speech:", error);
     if (error instanceof Error) {
-        throw new Error(`Failed to generate speech: ${error.message}`);
+        throw new Error(`Text-to-Speech API failed: ${error.message}`);
     }
-    throw new Error("An unknown error occurred while generating speech.");
+    throw new Error("An unknown error occurred while communicating with the Gemini API to generate speech.");
   }
 };

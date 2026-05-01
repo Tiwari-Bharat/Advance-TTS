@@ -12,13 +12,6 @@ export const AVAILABLE_VOICES: VoiceOption[] = [
   { value: 'Amphion', label: 'Amphion (Male, Bardic)', description: 'A storytelling male voice with a dramatic flair.' },
 ];
 
-export const PLAYBACK_SPEEDS: VoiceOption[] = [
-  { value: '0.75', label: '0.75x' },
-  { value: '1', label: 'Normal' },
-  { value: '1.25', label: '1.25x' },
-  { value: '1.5', label: '1.5x' },
-];
-
 export const SOUND_EFFECTS: VoiceOption[] = [
   { value: 'normal', label: 'Normal' },
   { value: 'auto', label: 'Auto-Emotion' },
@@ -43,3 +36,17 @@ export const EFFECT_PROMPTS: { [key: string]: string } = {
 
 
 export const DEFAULT_TEXT = "The character limit has been removed. Your words are now truly limitless. Craft novels, epic scripts, or any long-form content you can imagine. The only limit is your creativity.";
+
+export const TARGET_LANGUAGES = [
+  { value: 'Spanish', label: 'Spanish' },
+  { value: 'French', label: 'French' },
+  { value: 'German', label: 'German' },
+  { value: 'Italian', label: 'Italian' },
+  { value: 'Japanese', label: 'Japanese' },
+  { value: 'Korean', label: 'Korean' },
+  { value: 'Portuguese', label: 'Portuguese' },
+  { value: 'Chinese (Mandarin)', label: 'Chinese (Mandarin)' },
+  { value: 'Russian', label: 'Russian' },
+  { value: 'Hindi', label: 'Hindi' },
+  { value: 'Arabic', label: 'Arabic' },
+];
